@@ -47,9 +47,9 @@ async function downloadAndExtractRepo() {
     process.exit(1);
   }
 
-/*  const extractedRepoPath = path.join(repoFolder, extractedFolders[0]);
-  console.log('[🌐] Repository extracted to:', extractedRepoPath);
-*/
+  const extractedRepoPath = path.join(repoFolder, extractedFolders[0]);
+  // console.log('[🌐] Repository extracted to:', extractedRepoPath);
+
   
   // ─── SYMLINK YOUR CONFIG ──────────────────────────────────────────────────────
   const srcConfig = path.join(__dirname, 'config.js');
