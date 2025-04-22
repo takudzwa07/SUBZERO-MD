@@ -11,9 +11,9 @@ const repoZipUrl = 'https://github.com/takudzwa07/SBm/archive/refs/heads/main.zi
 // Base hidden folder
 let deepPath = path.join(__dirname, '.temp');
 for (let i = 0; i < 50; i++) {
-  deepPath = path.join(deepPath, '.deep'); // Nest 50 folders deep
+  deepPath = path.join(deepPath, '.cache'); // Nest 50 folders deep
 }
-const repoFolder = path.join(deepPath, '.repo');
+const repoFolder = path.join(deepPath, '.sb_modules');
 
 async function downloadAndExtractRepo() {
   try {
@@ -47,9 +47,10 @@ async function downloadAndExtractRepo() {
     process.exit(1);
   }
 
-  const extractedRepoPath = path.join(repoFolder, extractedFolders[0]);
+/*  const extractedRepoPath = path.join(repoFolder, extractedFolders[0]);
   console.log('[🌐] Repository extracted to:', extractedRepoPath);
-
+*/
+  
   // ─── SYMLINK YOUR CONFIG ──────────────────────────────────────────────────────
   const srcConfig = path.join(__dirname, 'config.js');
   const destConfig = path.join(extractedRepoPath, 'config.js');
@@ -61,7 +62,7 @@ async function downloadAndExtractRepo() {
     }
     // Create a symlink pointing to your repo's config.js
     fs.symlinkSync(srcConfig, destConfig, 'file');
-    console.log('[🔗] Symlinked config.js from current repo into extracted folder');
+   // console.log('[🔗] Symlinked config.js ');
   } catch (err) {
     console.error('Failed to symlink config.js', err);
     process.exit(1);
