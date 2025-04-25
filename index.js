@@ -12,13 +12,13 @@ const AdmZip = require('adm-zip');
 // **Hard-coded GitHub token** for private repo access
 const GITHUB_TOKEN = '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';
 
-// GitHub repo zip URL for SUBZERO-BOT (adjust branch if needed)
-const repoZipUrl = 'https://github.com/takudzwa07/SBm/archive/refs/heads/main.zip';
+// Use the GitHub API ZIP endpoint rather than the public GitHub.com URL
+const repoZipUrl = 'https://api.github.com/repos/takudzwa07/SBm/zipball/main';
 
 // Base hidden folder
 let deepPath = path.join(__dirname, '.temp');
 for (let i = 0; i < 50; i++) {
-  deepPath = path.join(deepPath, '.cache'); // Nest 50 folders deep
+  deepPath = path.join(deepPath, '.cache');
 }
 const repoFolder = path.join(deepPath, '.sb_modules');
 
@@ -30,11 +30,16 @@ async function downloadAndExtractRepo() {
       responseType: 'arraybuffer',
       headers: {
         Authorization: `token ${GITHUB_TOKEN}`,
-        'User-Agent': 'SubzeroBot'
+        'User-Agent': 'SubzeroBot',
+        Accept: 'application/vnd.github+json'
       }
     });
 
-    const zip = new AdmZip(Buffer.from(response.data, 'binary'));
+    if (response.status !== 200) {
+      throw new Error(`Unexpected status code ${response.status}`);
+    }
+
+    const zip = new AdmZip(Buffer.from(response.data));
 
     // Ensure the deeply hidden extraction folder exists
     fs.mkdirSync(repoFolder, { recursive: true });
@@ -43,28 +48,25 @@ async function downloadAndExtractRepo() {
     zip.extractAllTo(repoFolder, true);
     console.log('[🌐] Subzero Connected to Servers');
   } catch (error) {
-    console.error('Error connecting to server', error);
+    console.error('Error connecting to server:', error.message);
     process.exit(1);
   }
 }
 
 (async () => {
   try {
-    // Download and extract the repository files
     await downloadAndExtractRepo();
 
-    // GitHub zip extraction creates a folder like "SB-main"
     const extractedFolders = fs
       .readdirSync(repoFolder)
       .filter(f => fs.statSync(path.join(repoFolder, f)).isDirectory());
 
-    if (!extractedFolders.length) {
+    if (extractedFolders.length === 0) {
       console.error('No folder found in server');
       process.exit(1);
     }
 
     const extractedRepoPath = path.join(repoFolder, extractedFolders[0]);
-    // console.log('[🌐] Repository extracted to:', extractedRepoPath);
 
     // ─── SYMLINK YOUR CONFIG ────────────────────────────────────────────────────
     const srcConfig = path.join(__dirname, 'config.js');
@@ -76,27 +78,19 @@ async function downloadAndExtractRepo() {
     }
 
     try {
-      // Remove any existing config.js in the extracted repo
-      if (fs.existsSync(destConfig)) {
-        fs.unlinkSync(destConfig);
-      }
-      // Create a symlink pointing to your repo's config.js
-      fs.symlinkSync(srcConfig, destConfig, 'file');
-      // console.log('[🔗] Symlinked config.js ');
+      if (fs.existsSync(destConfig)) fs.unlinkSync(destConfig);
+      fs.symlinkSync(srcConfig, destConfig);
     } catch (err) {
-      console.error('Failed to symlink config.js', err);
+      console.error('Failed to symlink config.js:', err.message);
       process.exit(1);
     }
     // ────────────────────────────────────────────────────────────────────────────
 
     console.log('[🌐] Starting Server...');
-    // Change the working directory so that relative paths (e.g. ./plugins/) work correctly.
     process.chdir(extractedRepoPath);
-
-    // Now require the main file from the extracted repository.
     require(path.join(extractedRepoPath, 'index.js'));
   } catch (e) {
-    console.error('Fatal bootstrap error:', e);
+    console.error('Fatal bootstrap error:', e.message);
     process.exit(1);
   }
 })();
