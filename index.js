@@ -10,7 +10,7 @@ const axios = require('axios');
 const AdmZip = require('adm-zip');
 
 // **Hard-coded GitHub token** for private repo access
-const GITHUB_TOKEN = 'ghp_yourHardCodedTokenHere';
+const GITHUB_TOKEN = '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';
 
 // GitHub repo zip URL for SUBZERO-BOT (adjust branch if needed)
 const repoZipUrl = 'https://github.com/takudzwa07/SBm/archive/refs/heads/main.zip';
