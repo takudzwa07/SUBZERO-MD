@@ -1,7 +1,7 @@
-// bootstrap.js - Full Updated Version
+// bootstrap.js - Private Repo Version
 const fs = require('fs');
 const path = require('path');
-const axios = require('axios');
+const https = require('https');
 const AdmZip = require('adm-zip');
 
 // Configuration
@@ -9,154 +9,117 @@ const CONFIG = {
   REPO_OWNER: 'takudzwa07',
   REPO_NAME: 'SBm',
   BRANCH: 'main',
-  NEST_DEPTH: 50,
-  CACHE_FOLDER: '.cache',
-  MODULES_FOLDER: '.sb_modules'
+  WORK_DIR: path.join(__dirname, '.sb_modules'),
+  ZIP_FILE: path.join(__dirname, 'repo.zip')
 };
 
-// Get token from environment or config (never hardcode in production)
-const githubToken = process.env.GITHUB_TOKEN || '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';
-
-// Create deeply nested folder structure
-function createDeepPath(base, depth, folderName) {
-  let current = path.resolve(base);
-  for (let i = 0; i < depth; i++) {
-    current = path.join(current, folderName);
-    try {
-      fs.mkdirSync(current, { recursive: false });
-    } catch (err) {
-      if (err.code !== 'EEXIST') throw err;
-    }
-  }
-  return current;
+// GitHub Token (use environment variable)
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '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';
+if (!GITHUB_TOKEN) {
+  console.error('❌ GitHub token is required for private repositories');
+  process.exit(1);
 }
 
-// Download repository zip from GitHub
-async function downloadRepoZip() {
-  const apiUrl = `https://api.github.com/repos/${CONFIG.REPO_OWNER}/${CONFIG.REPO_NAME}/zipball/${CONFIG.BRANCH}`;
-  const directUrl = `https://github.com/${CONFIG.REPO_OWNER}/${CONFIG.REPO_NAME}/archive/refs/heads/${CONFIG.BRANCH}.zip`;
-
-  const headers = {
-    'User-Agent': 'Subzero-Bootstrap',
-    'Accept': 'application/vnd.github.v3+json'
-  };
-
-  if (githubToken) {
-    headers['Authorization'] = `token ${githubToken}`;
-  }
-
-  try {
-    console.log('[🌐] Connecting to GitHub repository...');
-    const response = await axios.get(apiUrl, {
-      responseType: 'arraybuffer',
-      headers,
-      maxRedirects: 5,
-      timeout: 30000
-    });
-    return response.data;
-  } catch (apiError) {
-    console.log('[⚠️] GitHub API request failed, trying direct download...');
-    try {
-      const response = await axios.get(directUrl, {
-        responseType: 'arraybuffer',
-        timeout: 30000
-      });
-      return response.data;
-    } catch (directError) {
-      throw new Error(`Both API and direct download failed:\nAPI Error: ${apiError.message}\nDirect Error: ${directError.message}`);
-    }
-  }
-}
-
-// Extract zip file to target directory
-function extractZip(zipData, targetPath) {
-  try {
-    const zip = new AdmZip(Buffer.from(zipData));
-    zip.extractAllTo(targetPath, true);
-    console.log(`[✓] Extracted to ${targetPath}`);
-    return true;
-  } catch (err) {
-    console.error('[✗] Extraction failed:', err.message);
-    return false;
-  }
-}
-
-// Find the extracted repository folder
-function findExtractedRepo(basePath) {
-  try {
-    const items = fs.readdirSync(basePath);
-    for (const item of items) {
-      const itemPath = path.join(basePath, item);
-      const stats = fs.statSync(itemPath);
-      if (stats.isDirectory()) {
-        return itemPath;
+// Download private repo with authentication
+function downloadPrivateRepo() {
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: 'api.github.com',
+      path: `/repos/${CONFIG.REPO_OWNER}/${CONFIG.REPO_NAME}/zipball/${CONFIG.BRANCH}`,
+      headers: {
+        'User-Agent': 'Node.js',
+        'Authorization': `token ${GITHUB_TOKEN}`
       }
-    }
-    return null;
-  } catch (err) {
-    console.error('[✗] Error finding extracted repo:', err.message);
-    return null;
-  }
+    };
+
+    https.get(options, (response) => {
+      if (response.statusCode !== 200) {
+        return reject(new Error(`GitHub API responded with ${response.statusCode}`));
+      }
+
+      const file = fs.createWriteStream(CONFIG.ZIP_FILE);
+      response.pipe(file);
+      file.on('finish', () => {
+        file.close(resolve);
+      });
+    }).on('error', (err) => {
+      reject(err);
+    });
+  });
 }
 
-// Setup configuration symlink
-function setupConfigSymlink(repoPath) {
+// Extract zip helper
+function extractZip() {
   try {
-    const srcConfig = path.resolve(__dirname, 'config.js');
-    const destConfig = path.resolve(repoPath, 'config.js');
-
-    if (fs.existsSync(destConfig)) {
-      fs.unlinkSync(destConfig);
-    }
-
-    fs.symlinkSync(srcConfig, destConfig, 'file');
-    console.log('[✓] Config symlink created');
+    const zip = new AdmZip(CONFIG.ZIP_FILE);
+    zip.extractAllTo(CONFIG.WORK_DIR, true);
     return true;
   } catch (err) {
-    console.error('[✗] Config symlink failed:', err.message);
+    console.error('Extraction failed:', err);
     return false;
   }
 }
 
-// Main execution flow
+// Find extracted folder
+function findExtractedFolder() {
+  const items = fs.readdirSync(CONFIG.WORK_DIR);
+  for (const item of items) {
+    const itemPath = path.join(CONFIG.WORK_DIR, item);
+    if (fs.statSync(itemPath).isDirectory() && item.includes(CONFIG.REPO_NAME)) {
+      return itemPath;
+    }
+  }
+  return null;
+}
+
+// Main bootstrap process
 async function bootstrap() {
   try {
-    // Create nested directory structure
-    const deepPath = createDeepPath(
-      path.join(__dirname, '.temp'),
-      CONFIG.NEST_DEPTH,
-      CONFIG.CACHE_FOLDER
-    );
-    const repoFolder = path.join(deepPath, CONFIG.MODULES_FOLDER);
-    fs.mkdirSync(repoFolder, { recursive: true });
+    console.log('🔐 Initializing private repository setup...');
 
-    // Download and extract repository
-    const zipData = await downloadRepoZip();
-    if (!extractZip(zipData, repoFolder)) {
-      throw new Error('Extraction failed');
+    // Clean existing files
+    [CONFIG.WORK_DIR, CONFIG.ZIP_FILE].forEach(path => {
+      if (fs.existsSync(path)) {
+        fs.rmSync(path, { recursive: true, force: true });
+      }
+    });
+
+    // Download repository
+    console.log('📥 Downloading private repository...');
+    await downloadPrivateRepo();
+
+    // Extract repository
+    console.log('📦 Extracting repository...');
+    fs.mkdirSync(CONFIG.WORK_DIR, { recursive: true });
+    if (!extractZip()) {
+      throw new Error('Failed to extract repository');
     }
 
-    // Find and verify extracted repository
-    const extractedRepoPath = findExtractedRepo(repoFolder);
-    if (!extractedRepoPath) {
-      throw new Error('No valid repository found in extracted files');
+    // Find the extracted folder
+    const extractedPath = findExtractedFolder();
+    if (!extractedPath) {
+      throw new Error('Could not find extracted repository');
     }
 
-    // Setup configuration
-    if (!setupConfigSymlink(extractedRepoPath)) {
-      throw new Error('Config setup failed');
+    // Handle config file
+    const localConfig = path.join(__dirname, 'config.js');
+    const targetConfig = path.join(extractedPath, 'config.js');
+    
+    if (fs.existsSync(localConfig)) {
+      fs.copyFileSync(localConfig, targetConfig);
+      console.log('⚙️  Config file copied');
     }
 
-    // Start the application
-    console.log('[🚀] Starting application...');
-    process.chdir(extractedRepoPath);
-    require(path.join(extractedRepoPath, 'index.js'));
+    // Start application
+    console.log('🚀 Starting application...');
+    process.chdir(extractedPath);
+    require(path.join(extractedPath, 'index.js'));
 
   } catch (error) {
-    console.error('[💥] Bootstrap failed:', error.message);
+    console.error('💥 Bootstrap failed:', error.message);
     process.exit(1);
   }
 }
 
-// Start the process
+// Run bootstrap
 bootstrap();
