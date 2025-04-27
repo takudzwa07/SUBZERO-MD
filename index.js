@@ -12,7 +12,7 @@ const CONFIG = {
 };
 
 // Validate GitHub Token
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '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';
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
 if (!GITHUB_TOKEN) {
   console.error('❌ ERROR: GITHUB_TOKEN environment variable is required for private repositories');
   console.error('ℹ️ Create one at: https://github.com/settings/tokens (with repo scope)');
