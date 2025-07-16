@@ -1,0 +1,4 @@
+module.exports = {
+  SESSION_ID: "", // PUT SESSION ID HERE 
+  OWNER_NUMBER: "263719647303"
+};
