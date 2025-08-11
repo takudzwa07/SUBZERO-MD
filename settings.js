@@ -1,5 +1,6 @@
 module.exports = {
-  SESSION_ID: ".",
-  OWNER_NUMBER: "263", 
-  PREFIX: "."
+  MODE: "private",
+  SESSION_ID: "default_session",
+  OWNER_NUMBER: "1234567890",
+  PREFIX: ".",
 };
