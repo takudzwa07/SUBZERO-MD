@@ -1,7 +1,5 @@
 module.exports = {
-  SESSION_ID: "SUBZERO~745d55f7592475b1390976c9075a525f55fbd952", // Put Session Id Here Inside "*"
-  OWNER_NUMBER: "263719647303", // Put Owner Number Here 
-  PREFIX: "." // Default Prefix You Can Change To .,*!?+-&%#@
+  SESSION_ID: "SUBZERO-MD;;;mcUxkYxS#rYZuO_42moTjESwNO7HHLKeF9aovC4-zyeNv6Hu9ONA",
+  OWNER_NUMBER: "+263719584260", 
+  PREFIX: "."
 };
-
-// CREATED BY DARRELL MUCHERI ( MR FRANK OFC 🇿🇼 )
