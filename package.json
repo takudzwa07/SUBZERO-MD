@@ -1,7 +1,7 @@
 {
   "name": "SUBZERO-MD",
-  "version": "4.2.0",
-  "description": "THE BEST BOT IN THE UNIVERSE",
+  "version": "5.0.1",
+  "description": "WhatsApp Bot created By Darrell Mucheri.",
   "main": "index.js",
   "scripts": {
     "start": "pm2 start index.js --deep-monitoring --attach --name SUBZERO-MD",
@@ -9,7 +9,7 @@
     "restart": "pm2 restart SUBZERO-MD"
   },
   "dependencies": {
-   "@whiskeysockets/baileys": "github:EdderBot02/bail",
+   "@whiskeysockets/baileys": "npm:angularsockets",
     "axios": "^1.7.9",
     "@adiwajshing/keyed-db": "latest",
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
